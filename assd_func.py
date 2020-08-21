@@ -46,6 +46,7 @@ def get_mask(contours, slices, image):
             nodes = np.array(c).reshape((-1, 3)) #triplets describing points of contour
             #assert np.amax(np.abs(np.diff(nodes[:, 2]))) == 0
             z_index = z.index(np.around(nodes[0, 2], 1))
+  
             #print(np.around(nodes[0, 2], 1))
             r = (nodes[:, 1] - pos_r) / spacing_r
             c = (nodes[:, 0] - pos_c) / spacing_c
@@ -202,7 +203,7 @@ def smooth_Fct(roi, r, i, L, Fct_L, a, voxelsize, k):
     K_after = np.array(K) % len(L)
     K_after = K_after[K_after > 0]
     Fct_r = find_Fct(roi, r, i, a, voxelsize)
-    Fct_k = np.array([Fct_L[k] for k in K_after])
+    Fct_k = np.array([Fct_L[int(k)] for k in K_after])
     
     Fct_x = 1/(2*k+1)*(Fct_r[0] + sum(Fct_k[..., 0]))
     Fct_y = 1/(2*k+1)*(Fct_r[1] + sum(Fct_k[..., 1]))
@@ -276,7 +277,9 @@ def assd(slices, target_label, voxelsize, a, SD, circles, k, w, smooth=True, blu
         slices = cv2.GaussianBlur(slices,(25,25),0) 
     
     for r in range(0,row_size -1):
-        for i in range(0,col_size-1):             
+        for i in range(0,col_size-1): 
+            i = int(i)
+            r = int(r)
             if  surface[r, i] != 0:
                 Fsd_r = find_Fsd(SD)
                 #pq, L, Fct_L = find_pd(j, start, surface_cord, circles)
@@ -306,7 +309,7 @@ def assd(slices, target_label, voxelsize, a, SD, circles, k, w, smooth=True, blu
             
     return dx, dy, mask, t, L
 
-def plotting_assd(dx, dy, mask, quiver=False, plot=True, display=False):
+def plotting_assd(dx, dy, mask, target_img, quiver=False, plot=True, display=False):
     roi_cord = np.argwhere(mask != 0)
     x = []
     y = []
@@ -334,10 +337,12 @@ def plotting_assd(dx, dy, mask, quiver=False, plot=True, display=False):
         fig,ax = plt.subplots()
         ax.quiver(x, y, u, v)
         plt.show()
-        
-    DU_mask = np.zeros((512,512))
+    
+    DU_mask = np.zeros((target_img.shape[0],target_img.shape[1]))
     x_new = x + u
+	print(len(x_new))
     y_new = y + v
+	print(len(y_new))
     for i in range(len(x_new)-1):
         DU_mask[int(round(x_new[i], 0)), int(round(y_new[i], 0))] = 1
         #DU_mask[int(x[i]), int(y[i])] = 1
