@@ -340,9 +340,9 @@ def plotting_assd(dx, dy, mask, target_img, quiver=False, plot=True, display=Fal
     
     DU_mask = np.zeros((target_img.shape[0],target_img.shape[1]))
     x_new = x + u
-	print(len(x_new))
+
     y_new = y + v
-	print(len(y_new))
+    
     for i in range(len(x_new)-1):
         DU_mask[int(round(x_new[i], 0)), int(round(y_new[i], 0))] = 1
         #DU_mask[int(x[i]), int(y[i])] = 1
@@ -353,6 +353,8 @@ def plotting_assd(dx, dy, mask, target_img, quiver=False, plot=True, display=Fal
         plt.imshow(target_img)
         ax.contour(mask, levels=[0.5, 1.5, 2.5, 3.5, 4.5], colors="blue")
         ax.contour(du, levels=[0.5, 1.5, 2.5, 3.5, 4.5], colors="red")
+        ax.set_xlim(384, 128)
+        ax.set_ylim(384, 128)
         plt.show()
         
     return du
@@ -360,7 +362,6 @@ def plotting_assd(dx, dy, mask, target_img, quiver=False, plot=True, display=Fal
 def make_mask(img, display):
     threshold = np.mean(img)
     thresh_img = np.where(img<threshold,1.0,0.0)  # threshold the image
-
     # First erode away the finer elements, then dilate to include some of the pixels surrounding the lung.  
     # We don't want to accidentally clip the lung.
 
@@ -369,9 +370,10 @@ def make_mask(img, display):
 
     #labels = measure.label(dilation)
     blur = cv2.GaussianBlur(dilation,(25,25),0)
-    
+    blur = cv2.GaussianBlur(blur,(25,25),0)
+
     return blur
-    blur = cv2.GaussianBlur(dilation,(25,25),0)
-    
-    return blur
+
+
+
 
