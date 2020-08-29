@@ -136,14 +136,17 @@ def find_gradct(r, i, voxelsize, roi):
     gradct = (roi[r+1,i]-roi[r-1, i])/(2*voxelsize)
     return gradct
 
-def find_i0(L, voxelsize, roi):
+def find_i0(L, voxelsize, roi, ismax):
     gradct_list = []
     L = np.array(L)
     for i in range(L.shape[0]):
         gradct = find_gradct(L[..., 0][i], L[..., 1][i], voxelsize, roi)
         grad_dist = (gradct[0]**2) + (gradct[1]**2) 
         gradct_list.append(grad_dist)
-    i0 = gradct_list.index(min(gradct_list))
+    if (ismax):
+        i0 = gradct_list.index(max(gradct_list))
+    else:
+        i0 = gradct_list.index(min(gradct_list))
     return i0
 
 def get_circular_index(i, R):
@@ -157,10 +160,10 @@ def calc_circular_dist(i, i0, R):
     circular_dist = min([(i-i0)**2, (i-i0 - R)**2,  (i-i0 + R)**2])
     return circular_dist
 
-def calc_tg(r, i, start, surface_cord, a, voxelsize, roi, w):
+def calc_tg(r, i, start, surface_cord, a, voxelsize, roi, w, ismax):
     L, Fct_L = order_voxel_list(start, surface_cord, roi, a, voxelsize)
     R = len(L)
-    i0 = find_i0(L, voxelsize, roi)
+    i0 = find_i0(L, voxelsize, roi, ismax)
     w0 = R/w
     i = L.index([r, i])
     #i = i - i0
@@ -170,10 +173,10 @@ def calc_tg(r, i, start, surface_cord, a, voxelsize, roi, w):
     t = 1/(np.sqrt(2*np.pi)*w0)*np.exp(-(circular_dist)/(2*w0**2)) 
     return t
 
-def find_tg(L, start, surface_cord, a, voxelsize, roi, w):
+def find_tg(L, start, surface_cord, a, voxelsize, roi, w, ismax):
     tg_list = []
     for i in range(len(L)):
-        tg = calc_tg(L[i][0], L[i][1], start, surface_cord, a, voxelsize, roi, w)
+        tg = calc_tg(L[i][0], L[i][1], start, surface_cord, a, voxelsize, roi, w, ismax)
         tg_list.append(tg)
     t = np.array(tg_list) - np.mean(tg_list) 
     return t*1000
@@ -258,7 +261,7 @@ def r_to_xyz(F):
     F_z =  F[2]
     return F_x, F_y, F_z
 
-def assd(slices, target_label, voxelsize, a, SD, circles, k, w, smooth=True, blur=False):
+def assd(slices, target_label, voxelsize, a, SD, circles, k, w, smooth=True, blur=False, ismax=False):
     mask = np.where(target_label!=0,4,0)
     surface, interior = make_surface_contour(mask)
     roi=slices*mask
@@ -272,7 +275,7 @@ def assd(slices, target_label, voxelsize, a, SD, circles, k, w, smooth=True, blu
     start = random.choice(surface_cord.tolist())
     j = 0
     L, Fct_L = order_voxel_list(start, surface_cord, roi, a, voxelsize)
-    t = find_tg(L, start, surface_cord, a, voxelsize, roi, w)
+    t = find_tg(L, start, surface_cord, a, voxelsize, roi, w, ismax)
     if (blur):
         slices = cv2.GaussianBlur(slices,(25,25),0) 
     
@@ -371,6 +374,7 @@ def make_mask(img, display):
     #labels = measure.label(dilation)
     blur = cv2.GaussianBlur(dilation,(25,25),0)
     blur = cv2.GaussianBlur(blur,(25,25),0)
+    #blur = cv2.GaussianBlur(blur,(25,25),0)
 
     return blur
 
