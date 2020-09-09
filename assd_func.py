@@ -214,11 +214,14 @@ def smooth_Fct(roi, r, i, L, Fct_L, a, voxelsize, k):
     Fct_r = np.array([float(Fct_x), float(Fct_y), float(Fct_z)])
     return Fct_r
 
-def find_Fsd(SD): 
+def find_Fsd(SD, seed): 
+    random.seed(seed)
     pRand_k = uniform.rvs(0, 1, size = 1)
     Fsd_x=norm.ppf(pRand_k, loc=0, scale=SD[0])
+    random.seed(seed+1)
     pRand_k = uniform.rvs(0, 1, size = 1)
     Fsd_y=norm.ppf(pRand_k, loc=0, scale=SD[1])
+    random.seed(seed+2)
     pRand_k = uniform.rvs(0, 1, size = 1)
     Fsd_z=norm.ppf(pRand_k, loc=0, scale=SD[2])
     Fsd_r = np.array([float(Fsd_x), float(Fsd_y), float(Fsd_z)])
@@ -261,7 +264,7 @@ def r_to_xyz(F):
     F_z =  F[2]
     return F_x, F_y, F_z
 
-def assd(slices, target_label, voxelsize, a, SD, circles, k, w, smooth=True, blur=False, ismax=False):
+def assd(slices, target_label, voxelsize, a, SD, circles, seed, k, w, smooth=True, blur=False, ismax=False):
     mask = np.where(target_label!=0,4,0)
     surface, interior = make_surface_contour(mask)
     roi=slices*mask
@@ -284,7 +287,7 @@ def assd(slices, target_label, voxelsize, a, SD, circles, k, w, smooth=True, blu
             i = int(i)
             r = int(r)
             if  surface[r, i] != 0:
-                Fsd_r = find_Fsd(SD)
+                Fsd_r = find_Fsd(SD, seed)
                 #pq, L, Fct_L = find_pd(j, start, surface_cord, circles)
                 if (smooth):
                     Fct_r = smooth_Fct(slices, r, i, L, Fct_L, a, voxelsize, k)
@@ -343,7 +346,6 @@ def plotting_assd(dx, dy, mask, target_img, quiver=False, plot=True, display=Fal
     
     DU_mask = np.zeros((target_img.shape[0],target_img.shape[1]))
     x_new = x + u
-
     y_new = y + v
     
     for i in range(len(x_new)-1):
