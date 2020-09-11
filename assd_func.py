@@ -17,10 +17,13 @@ from skimage import morphology
 from skimage.draw import polygon
 import cv2
 
-def read_structure(structure):
+
+#1 for bladder, 2 for rectum, 3 for prostate, 4 for Seminal vesicles, 6 for femoral head
+
+def read_structure(structure, organ_id):
     contours = []
     for i in range(len(structure.ROIContourSequence)):
-        if i == 3:
+        if i == organ_id:
             contour = {}
             contour['color'] = structure.ROIContourSequence[i].ROIDisplayColor
             contour['number'] = structure.ROIContourSequence[i].ReferencedROINumber ##
