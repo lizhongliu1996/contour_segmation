@@ -405,7 +405,7 @@ def make_mask(img, display):
     dilation = morphology.dilation(eroded,np.ones([8,8]))
 
     #labels = measure.label(dilation)
-    blur = cv.GaussianBlur(dilation,(15,15),0)
+    blur = cv.GaussianBlur(dilation,(25,25),0)
     #blur = cv2.GaussianBlur(blur,(25,25),0)
     #blur = cv2.GaussianBlur(blur,(25,25),0)
     #final_du = np.where(dilation < 0.5, 0, 4)
