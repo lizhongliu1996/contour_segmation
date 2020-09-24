@@ -13,6 +13,7 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from sklearn.cluster import KMeans
 from skimage import morphology
 from skimage.draw import polygon
+from scipy import ndimage
 import cv2 as cv
 import numpy as np
 
@@ -193,6 +194,20 @@ def find_i0(images, labels, roi_z, surface_cord, L, voxelsize, roi):
     i0 = grad_dist.index(min(grad_dist))
     return i0
 
+def find_i0_sym(L, i0, cX, cY, m, sym):
+    new_m_list = []
+    L = np.array(L)
+    for i in range(L.shape[0]):
+        Lx= L[i,0]; Ly=L[i,1];
+        if sym == "y-axis":
+            new_m =abs((Ly-cY)/(Lx-cX) + m)
+            new_m_list.append(new_m)   
+        else:
+            new_m =abs((Ly-cY)/(Lx-cX) + m)
+            new_m_list.append(new_m)
+
+    i0_sym =new_m_list.index(min(new_m_list)) 
+    return i0_sym
 
 def get_circular_index(i, R):
     if i < 0:
@@ -220,10 +235,42 @@ def calc_tg(L, i, start, a, roi, w, gradct, i0):
     t = 1/(np.sqrt(2*np.pi)*w0)*np.exp(-(circular_dist)/(2*w0**2)) 
     return t
 
+def calc_tg_sym(r, i, start, surface_cord, a, voxelsize, roi, w, ismax, sym):
+    L, Fct_L = order_voxel_list(start, surface_cord, roi, a, voxelsize)
+    R = len(L)
+    i0 = find_i0(L, voxelsize, roi, ismax)
+    w0 = R/w
+    i = L.index([r, i])
+    
+    #find mass center
+    cX, cY= ndimage.measurements.center_of_mass(roi)      
+    #find slope
+    m = (L[i0][1]-cY)/(L[i0][0]-cX)
+    #find i0~
+    i0_sym = find_i0_sym(L,i0, cX, cY, m, sym)
+    #i = i - i0
+    #i = get_circular_index(i, R)
+    r = np.arange(i)
+    circular_dist = calc_circular_dist(i, i0, R)
+    circular_dist2 = calc_circular_dist(i, i0_sym, R)
+    t1 = 1/(np.sqrt(2*np.pi)*w0)*np.exp(-(circular_dist)/(2*w0**2)) 
+    t2 = 1/(np.sqrt(2*np.pi)*w0)*np.exp(-(circular_dist2)/(2*w0**2)) 
+    t = 0.5*t1+0.5*t2
+    
+    return t
+
 def find_tg(L, start, surface_cord, a, voxelsize, roi, w, roi_z, gradct, i0):
     tg_list = []
     for i in range(len(L)):
         tg = calc_tg(L, i, start, a, roi, w, gradct, i0)
+        tg_list.append(tg)
+    t = np.array(tg_list) - np.mean(tg_list) 
+    return t*1000
+
+def find_tg_sym(L, start, surface_cord, a, voxelsize, roi, w, roi_z, gradct, i0, sym):
+    tg_list = []
+    for i in range(len(L)):
+        tg = calc_tg_sym(L, i, start, a, roi, w, gradct, i0, sym)
         tg_list.append(tg)
     t = np.array(tg_list) - np.mean(tg_list) 
     return t*1000
@@ -345,6 +392,60 @@ def assd_Sobel(slices, target_label, voxelsize, a, SD, circles, seed, k, w, imag
             
             
     return dx, dy, mask, t, L
+
+def assd_sym(slices, target_label, voxelsize, a, SD, circles, seed, k, w, sym, smooth=True, blur=False, ismax=False):
+    mask = np.where(target_label!=0,4,0)
+    surface, interior = make_surface_contour(mask)
+    roi=slices*mask
+    row_size = roi.shape[0]
+    col_size = roi.shape[1]
+    mat = np.ndarray([row_size, col_size],dtype=np.float64)
+    dx = np.zeros((512, 512))
+    dy = np.zeros((512, 512))
+    dz = np.zeros((512, 512))
+    surface_cord = np.argwhere(surface != 0)
+    start = random.choice(surface_cord.tolist())
+    j = 0
+    L, Fct_L = order_voxel_list(start, surface_cord, roi, a, voxelsize)
+    t = find_tg_sym(L, start, surface_cord, a, voxelsize, roi, w, ismax, sym)
+    
+    if (blur):
+        slices = cv2.GaussianBlur(slices,(25,25),0) 
+    
+    for r in range(0,row_size -1):
+        for i in range(0,col_size-1): 
+            i = int(i)
+            r = int(r)
+            if  surface[r, i] != 0:             
+                Fsd_r = find_Fsd(SD, seed)
+                #pq, L, Fct_L = find_pd(j, start, surface_cord, circles)
+                if (smooth):
+                    Fct_r = smooth_Fct(slices, r, i, L, Fct_L, a, voxelsize, k)
+                else:
+                    Fct_r = find_Fct(slices, r, i, a, voxelsize)
+                D_r = find_D(Fsd_r, Fct_r)
+                D_x, D_y, D_z = r_to_xyz(D_r)
+                
+                if t[j] == 0:
+                    print("yes")
+                    t[j] = 0.000001
+                    
+                else:
+                    t[j] = t[j]
+                
+                dx[r, i] = D_x*t[j]
+                dy[r, i] = D_y*t[j] 
+                
+                 
+            elif interior[r, i] != 0: 
+                pos_r, neg_r = nearest_neighbor_search(surface[r], i)
+                dx[r, i] = 0.00000000000001 #D_x
+                dy[r, i] = 0.00000000000001 #D_y
+            
+            
+    return dx, dy, mask, t, L
+
+
 
 def plotting_assd(dx, dy, mask, target_img, quiver=False, plot=True, display=False):
     roi_cord = np.argwhere(mask != 0)
