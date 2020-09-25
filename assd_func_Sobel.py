@@ -197,14 +197,19 @@ def find_i0(images, labels, roi_z, surface_cord, L, voxelsize, roi):
 def find_i0_sym(L, i0, cX, cY, m, sym):
     new_m_list = []
     L = np.array(L)
+    sign_i0_x = np.sign(L[i0,0] - cX)
+    sign_i0_y = np.sign(L[i0,1] - cY)
     for i in range(L.shape[0]):
-        Lx= L[i,0]; Ly=L[i,1];
+        sign_i_x = np.sign(L[i,0] - cX)
+        sign_i_y = np.sign(L[i,1] - cY)
         if sym == "y-axis":
-            new_m =abs((Ly-cY)/(Lx-cX) + m)
-            new_m_list.append(new_m)   
-        else:
-            new_m =abs((Ly-cY)/(Lx-cX) + m)
-            new_m_list.append(new_m)
+            if (sign_i_x == -sign_i0_x and sign_i_y == sign_i0_y):
+                new_m =abs((L[i,1]-cY)/(L[i,0]-cX) + m)
+                new_m_list.append(new_m)   
+        elif sym == "x-axis":
+            if (sign_i_x == sign_i0_x and sign_i_y == -sign_i0_y):
+                new_m =abs((L[i,1]-cY)/(L[i,0]-cX) + m)
+                new_m_list.append(new_m)
 
     i0_sym =new_m_list.index(min(new_m_list)) 
     return i0_sym
@@ -235,28 +240,29 @@ def calc_tg(L, i, start, a, roi, w, gradct, i0):
     t = 1/(np.sqrt(2*np.pi)*w0)*np.exp(-(circular_dist)/(2*w0**2)) 
     return t
 
-def calc_tg_sym(r, i, start, surface_cord, a, voxelsize, roi, w, ismax, sym):
-    L, Fct_L = order_voxel_list(start, surface_cord, roi, a, voxelsize)
+def calc_tg_sym(L, i, start, a, roi, w, gradct, i0, sym):
+    #L, Fct_L = order_voxel_list(start, surface_cord, roi, a, voxelsize)
     R = len(L)
-    i0 = find_i0(L, voxelsize, roi, ismax)
+    r = L[i][0]
+    i = L[i][1]
+    #i0 = find_i0(roi_z, surface_cord, L, voxelsize, roi, gradct)
     w0 = R/w
     i = L.index([r, i])
     
     #find mass center
-    cX, cY= ndimage.measurements.center_of_mass(roi)      
+    cX, cY= ndimage.measurements.center_of_mass(roi)
+    cX = round(cX); cY = round(cY)
     #find slope
     m = (L[i0][1]-cY)/(L[i0][0]-cX)
     #find i0~
-    i0_sym = find_i0_sym(L,i0, cX, cY, m, sym)
+    i0_sym = find_i0_sym(L, i0, cX, cY, m, sym)
+    
     #i = i - i0
     #i = get_circular_index(i, R)
     r = np.arange(i)
-    circular_dist = calc_circular_dist(i, i0, R)
     circular_dist2 = calc_circular_dist(i, i0_sym, R)
-    t1 = 1/(np.sqrt(2*np.pi)*w0)*np.exp(-(circular_dist)/(2*w0**2)) 
-    t2 = 1/(np.sqrt(2*np.pi)*w0)*np.exp(-(circular_dist2)/(2*w0**2)) 
-    t = 0.5*t1+0.5*t2
-    
+    t = 1/(np.sqrt(2*np.pi)*w0)*np.exp(-(circular_dist2)/(2*w0**2)) 
+       
     return t
 
 def find_tg(L, start, surface_cord, a, voxelsize, roi, w, roi_z, gradct, i0):
@@ -362,7 +368,7 @@ def assd_Sobel(slices, target_label, voxelsize, a, SD, circles, seed, k, w, imag
     j = 0
     gradct = find_Sobel_gradct(roi)
     L, Fct_L = order_voxel_list(start, surface_cord, roi, a, voxelsize, gradct)
-    i0 = find_i0(images, labels, roi_z, surface_cord, L, voxelsize, roi)
+    i0 = find_i0(images, labels, roi_z, surface_cord, L, voxelsize, roi)    
     t = find_tg(L, start, surface_cord, a, voxelsize, roi, w, roi_z, gradct, i0)
     
     for r in range(0,row_size -1):
@@ -393,7 +399,7 @@ def assd_Sobel(slices, target_label, voxelsize, a, SD, circles, seed, k, w, imag
             
     return dx, dy, mask, t, L
 
-def assd_sym(slices, target_label, voxelsize, a, SD, circles, seed, k, w, sym, smooth=True, blur=False, ismax=False):
+def assd_sym(slices, target_label, voxelsize, a, SD, circles, seed, k, w, sym, images, labels, organ_i, smooth=True):
     mask = np.where(target_label!=0,4,0)
     surface, interior = make_surface_contour(mask)
     roi=slices*mask
@@ -405,12 +411,14 @@ def assd_sym(slices, target_label, voxelsize, a, SD, circles, seed, k, w, sym, s
     dz = np.zeros((512, 512))
     surface_cord = np.argwhere(surface != 0)
     start = random.choice(surface_cord.tolist())
-    j = 0
-    L, Fct_L = order_voxel_list(start, surface_cord, roi, a, voxelsize)
-    t = find_tg_sym(L, start, surface_cord, a, voxelsize, roi, w, ismax, sym)
-    
-    if (blur):
-        slices = cv2.GaussianBlur(slices,(25,25),0) 
+    roi_z = find_roi_slices(images, labels, organ_i)
+    j = 0    
+    gradct = find_Sobel_gradct(roi)
+    L, Fct_L = order_voxel_list(start, surface_cord, roi, a, voxelsize, gradct)
+    i0 = find_i0(images, labels, roi_z, surface_cord, L, voxelsize, roi)      
+    t1 = find_tg(L, start, surface_cord, a, voxelsize, roi, w, roi_z, gradct, i0)
+    t2 = find_tg_sym(L, start, surface_cord, a, voxelsize, roi, w, roi_z, gradct, i0, sym)
+    t=0.5*t1+0.5*t2
     
     for r in range(0,row_size -1):
         for i in range(0,col_size-1): 
@@ -420,28 +428,20 @@ def assd_sym(slices, target_label, voxelsize, a, SD, circles, seed, k, w, sym, s
                 Fsd_r = find_Fsd(SD, seed)
                 #pq, L, Fct_L = find_pd(j, start, surface_cord, circles)
                 if (smooth):
-                    Fct_r = smooth_Fct(slices, r, i, L, Fct_L, a, voxelsize, k)
+                    Fct_r = smooth_Fct(slices, r, i, L, Fct_L, a, voxelsize, k, gradct)
                 else:
-                    Fct_r = find_Fct(slices, r, i, a, voxelsize)
-                D_r = find_D(Fsd_r, Fct_r)
-                D_x, D_y, D_z = r_to_xyz(D_r)
+                    Fct_r = find_Fct(slices, r, i, a, voxelsize, gradct)    
                 
-                if t[j] == 0:
-                    print("yes")
-                    t[j] = 0.000001
-                    
-                else:
-                    t[j] = t[j]
+                D_r = find_D(Fsd_r, Fct_r)
+                D_x, D_y = r_to_xyz(D_r)
                 
                 dx[r, i] = D_x*t[j]
                 dy[r, i] = D_y*t[j] 
-                
-                 
+   
             elif interior[r, i] != 0: 
                 pos_r, neg_r = nearest_neighbor_search(surface[r], i)
                 dx[r, i] = 0.00000000000001 #D_x
                 dy[r, i] = 0.00000000000001 #D_y
-            
             
     return dx, dy, mask, t, L
 
