@@ -225,7 +225,7 @@ def calc_circular_dist(i, i0, R):
     circular_dist = min([(i-i0)**2, (i-i0 - R)**2,  (i-i0 + R)**2])
     return circular_dist
 
-def calc_tg(L, i, start, a, roi, w, gradct, i0):
+def calc_tg(L, i, w, i0):
     #L, Fct_L = order_voxel_list(start, surface_cord, roi, a, voxelsize, gradct)
     R = len(L)
     r = L[i][0]
@@ -240,43 +240,10 @@ def calc_tg(L, i, start, a, roi, w, gradct, i0):
     t = 1/(np.sqrt(2*np.pi)*w0)*np.exp(-(circular_dist)/(2*w0**2)) 
     return t
 
-def calc_tg_sym(L, i, start, a, roi, w, gradct, i0, sym):
-    #L, Fct_L = order_voxel_list(start, surface_cord, roi, a, voxelsize)
-    R = len(L)
-    r = L[i][0]
-    i = L[i][1]
-    #i0 = find_i0(roi_z, surface_cord, L, voxelsize, roi, gradct)
-    w0 = R/w
-    i = L.index([r, i])
-    
-    #find mass center
-    cX, cY= ndimage.measurements.center_of_mass(roi)
-    cX = round(cX); cY = round(cY)
-    #find slope
-    m = (L[i0][1]-cY)/(L[i0][0]-cX)
-    #find i0~
-    i0_sym = find_i0_sym(L, i0, cX, cY, m, sym)
-    
-    #i = i - i0
-    #i = get_circular_index(i, R)
-    r = np.arange(i)
-    circular_dist2 = calc_circular_dist(i, i0_sym, R)
-    t = 1/(np.sqrt(2*np.pi)*w0)*np.exp(-(circular_dist2)/(2*w0**2)) 
-       
-    return t
-
-def find_tg(L, start, surface_cord, a, voxelsize, roi, w, roi_z, gradct, i0):
+def find_tg(L, w, i0):
     tg_list = []
     for i in range(len(L)):
-        tg = calc_tg(L, i, start, a, roi, w, gradct, i0)
-        tg_list.append(tg)
-    t = np.array(tg_list) - np.mean(tg_list) 
-    return t*1000
-
-def find_tg_sym(L, start, surface_cord, a, voxelsize, roi, w, roi_z, gradct, i0, sym):
-    tg_list = []
-    for i in range(len(L)):
-        tg = calc_tg_sym(L, i, start, a, roi, w, gradct, i0, sym)
+        tg = calc_tg(L, i, w, i0)
         tg_list.append(tg)
     t = np.array(tg_list) - np.mean(tg_list) 
     return t*1000
@@ -335,7 +302,6 @@ def find_Fct(roi, r, i, a, voxelsize, gradct):
     Fct_r = np.array([float(Fct_x), float(Fct_y)])
     return Fct_r
 
-
 def find_D(Fsd_r, Fct_r):
     Fct_x =  Fct_r[0]
     Fct_y =  Fct_r[1]
@@ -368,8 +334,8 @@ def assd_Sobel(slices, target_label, voxelsize, a, SD, circles, seed, k, w, imag
     j = 0
     gradct = find_Sobel_gradct(roi)
     L, Fct_L = order_voxel_list(start, surface_cord, roi, a, voxelsize, gradct)
-    i0 = find_i0(images, labels, roi_z, surface_cord, L, voxelsize, roi)    
-    t = find_tg(L, start, surface_cord, a, voxelsize, roi, w, roi_z, gradct, i0)
+    i0 = find_i0(images, labels, roi_z, surface_cord, L, voxelsize, roi)   
+    t = find_tg(L, w, i0)
     
     for r in range(0,row_size -1):
         for i in range(0,col_size-1): 
@@ -416,9 +382,18 @@ def assd_sym(slices, target_label, voxelsize, a, SD, circles, seed, k, w, sym, i
     gradct = find_Sobel_gradct(roi)
     L, Fct_L = order_voxel_list(start, surface_cord, roi, a, voxelsize, gradct)
     i0 = find_i0(images, labels, roi_z, surface_cord, L, voxelsize, roi)      
-    t1 = find_tg(L, start, surface_cord, a, voxelsize, roi, w, roi_z, gradct, i0)
-    t2 = find_tg_sym(L, start, surface_cord, a, voxelsize, roi, w, roi_z, gradct, i0, sym)
-    t=0.5*t1+0.5*t2
+     
+    #find mass center
+    cX, cY= ndimage.measurements.center_of_mass(roi)
+    cX = round(cX); cY = round(cY)
+    #find slope
+    m = (L[i0][1]-cY)/(L[i0][0]-cX)
+    #find i0~
+    i0_sym = find_i0_sym(L, i0, cX, cY, m, sym)
+    
+    t1 = find_tg(L, w, i0)
+    t2 = find_tg(L, w, i0_sym)
+    t = 0.5*t1+0.5*t2
     
     for r in range(0,row_size -1):
         for i in range(0,col_size-1): 
