@@ -96,7 +96,7 @@ def find_min_dist(start, surface_cord):
         y_j = i[1]
         dist = ((x_j - start[0])**2)**0.5 + ((y_j - start[1])**2)**0.5
         dist_list.append(dist)
-        min_dist = min(dist_list)
+    min_dist = min(dist_list)
     return min_dist
     
 def find_next_voxel(start, surface_cord):
