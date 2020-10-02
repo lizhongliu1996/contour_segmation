@@ -16,7 +16,7 @@ from skimage.draw import polygon
 from scipy import ndimage
 import cv2 as cv
 import numpy as np
-
+import matplotlib.patches as mpatches
 
 #1 for bladder, 2 for rectum, 3 for prostate, 4 for Seminal vesicles, 6 for femoral head
 
@@ -96,7 +96,11 @@ def find_min_dist(start, surface_cord):
         y_j = i[1]
         dist = ((x_j - start[0])**2)**0.5 + ((y_j - start[1])**2)**0.5
         dist_list.append(dist)
-    min_dist = min(dist_list)
+    #print(dist_list)
+    if dist_list == []:
+        min_dist = 0
+    else:
+        min_dist = min(dist_list)
     return min_dist
     
 def find_next_voxel(start, surface_cord):
@@ -167,7 +171,12 @@ def voxel_z_closest_list(images, labels, start, roi_z, surface_cord, voxelsize, 
         mask = np.where(target_label_next !=0,4,0)
         surface_next, interior_next = make_surface_contour(mask)
         surface_cord_next = np.argwhere(surface_next != 0)
-        next_voxel = find_next_voxel(start, surface_cord_next)
+        try:
+            next_voxel = find_next_voxel(start, surface_cord)
+        except:
+            for voxel in surface_cord:
+                if i not in L:
+                    next_voxel = voxel
         z_roi_voxel_list.append(next_voxel)
         gradct_x = gradct_slice[0][next_voxel[0], next_voxel[1]]
         gradct_y = gradct_slice[1][next_voxel[0], next_voxel[1]]
@@ -193,26 +202,6 @@ def find_i0(images, labels, roi_z, surface_cord, L, voxelsize, roi):
     grad_dist = list((np.array(avg_grad_surface_list)[..., 0]**2) + (np.array(avg_grad_surface_list)[..., 1]**2)) #magnitude
     i0 = grad_dist.index(min(grad_dist))
     return i0
-
-def find_i0_sym(L, i0, cX, cY, m, sym):
-    new_m_list = []
-    L = np.array(L)
-    sign_i0_x = np.sign(L[i0,0] - cX)
-    sign_i0_y = np.sign(L[i0,1] - cY)
-    for i in range(L.shape[0]):
-        sign_i_x = np.sign(L[i,0] - cX)
-        sign_i_y = np.sign(L[i,1] - cY)
-        if sym == "y-axis":
-            if (sign_i_x == -sign_i0_x and sign_i_y == sign_i0_y):
-                new_m =abs((L[i,1]-cY)/(L[i,0]-cX) + m)
-                new_m_list.append(new_m)   
-        elif sym == "x-axis":
-            if (sign_i_x == sign_i0_x and sign_i_y == -sign_i0_y):
-                new_m =abs((L[i,1]-cY)/(L[i,0]-cX) + m)
-                new_m_list.append(new_m)
-
-    i0_sym =new_m_list.index(min(new_m_list)) 
-    return i0_sym
 
 def get_circular_index(i, R):
     if i < 0:
@@ -363,63 +352,7 @@ def assd_Sobel(slices, target_label, voxelsize, a, SD, circles, seed, k, w, imag
                 dy[r, i] = 0.00000000000001 #D_y
             
             
-    return dx, dy, mask, t, L
-
-def assd_sym(slices, target_label, voxelsize, a, SD, circles, seed, k, w, sym, images, labels, organ_i, smooth=True):
-    mask = np.where(target_label!=0,4,0)
-    surface, interior = make_surface_contour(mask)
-    roi=slices*mask
-    row_size = roi.shape[0]
-    col_size = roi.shape[1]
-    mat = np.ndarray([row_size, col_size],dtype=np.float64)
-    dx = np.zeros((512, 512))
-    dy = np.zeros((512, 512))
-    dz = np.zeros((512, 512))
-    surface_cord = np.argwhere(surface != 0)
-    start = random.choice(surface_cord.tolist())
-    roi_z = find_roi_slices(images, labels, organ_i)
-    j = 0    
-    gradct = find_Sobel_gradct(roi)
-    L, Fct_L = order_voxel_list(start, surface_cord, roi, a, voxelsize, gradct)
-    i0 = find_i0(images, labels, roi_z, surface_cord, L, voxelsize, roi)      
-     
-    #find mass center
-    cX, cY= ndimage.measurements.center_of_mass(roi)
-    cX = round(cX); cY = round(cY)
-    #find slope
-    m = (L[i0][1]-cY)/(L[i0][0]-cX)
-    #find i0~
-    i0_sym = find_i0_sym(L, i0, cX, cY, m, sym)
-    
-    t1 = find_tg(L, w, i0)
-    t2 = find_tg(L, w, i0_sym)
-    t = 0.5*t1+0.5*t2
-    
-    for r in range(0,row_size -1):
-        for i in range(0,col_size-1): 
-            i = int(i)
-            r = int(r)
-            if  surface[r, i] != 0:             
-                Fsd_r = find_Fsd(SD, seed)
-                #pq, L, Fct_L = find_pd(j, start, surface_cord, circles)
-                if (smooth):
-                    Fct_r = smooth_Fct(slices, r, i, L, Fct_L, a, voxelsize, k, gradct)
-                else:
-                    Fct_r = find_Fct(slices, r, i, a, voxelsize, gradct)    
-                
-                D_r = find_D(Fsd_r, Fct_r)
-                D_x, D_y = r_to_xyz(D_r)
-                
-                dx[r, i] = D_x*t[j]
-                dy[r, i] = D_y*t[j] 
-   
-            elif interior[r, i] != 0: 
-                pos_r, neg_r = nearest_neighbor_search(surface[r], i)
-                dx[r, i] = 0.00000000000001 #D_x
-                dy[r, i] = 0.00000000000001 #D_y
-            
-    return dx, dy, mask, t, L
-
+    return dx, dy, mask, t, L, roi_z
 
 
 def plotting_assd(dx, dy, mask, target_img, quiver=False, plot=True, display=False):
@@ -484,5 +417,6 @@ def make_mask(img, display):
     blur = cv.GaussianBlur(dilation,(25,25),0)
     #blur = cv2.GaussianBlur(blur,(25,25),0)
     #blur = cv2.GaussianBlur(blur,(25,25),0)
-    #final_du = np.where(dilation < 0.5, 0, 4)
-    return blur
+    final_du = np.where(blur < 0.5, 0, 4)
+    return final_du
+
