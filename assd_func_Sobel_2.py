@@ -196,11 +196,14 @@ def find_z_list(images, labels, roi_z, surface_cord, voxelsize, roi):
         avg_grad_surface_list.append(avg_grad)
     return z_surface_list, avg_grad_surface_list
 
-def find_i0(images, labels, roi_z, surface_cord, L, voxelsize, roi):
+def find_i0(images, labels, roi_z, surface_cord, L, voxelsize, roi, ismax):
     #L = np.array(L)
     z_list, avg_grad_surface_list = find_z_list(images, labels, roi_z, surface_cord, voxelsize, roi)
     grad_dist = list((np.array(avg_grad_surface_list)[..., 0]**2) + (np.array(avg_grad_surface_list)[..., 1]**2)) #magnitude
-    i0 = grad_dist.index(min(grad_dist))
+    if ismax:
+        i0 = grad_dist.index(max(grad_dist))
+    else:
+        i0 = grad_dist.index(min(grad_dist))
     return i0
 
 def get_circular_index(i, R):
@@ -295,7 +298,7 @@ def r_to_xyz(F):
     #F_z =  F[2]
     return F_x, F_y
 
-def assd_Sobel(slices, target_label, voxelsize, a, SD, circles, seed, k, w, images, labels, organ_i, smooth=True):
+def assd_Sobel(slices, target_label, voxelsize, a, SD, circles, seed, k, w, images, labels, organ_i, ismax=False, smooth=True):
     mask = np.where(target_label!=0,4,0)
     surface, interior = make_surface_contour(mask)
     roi=slices*mask
@@ -311,7 +314,7 @@ def assd_Sobel(slices, target_label, voxelsize, a, SD, circles, seed, k, w, imag
     j = 0
     gradct = find_Sobel_gradct(roi)
     L, Fct_L = order_voxel_list(start, surface_cord, roi, a, voxelsize, gradct)
-    i0 = find_i0(images, labels, roi_z, surface_cord, L, voxelsize, roi)   
+    i0 = find_i0(images, labels, roi_z, surface_cord, L, voxelsize, roi, ismax)   
     t = find_tg(L, w, i0)
     
     for r in range(0,row_size -1):
@@ -323,7 +326,7 @@ def assd_Sobel(slices, target_label, voxelsize, a, SD, circles, seed, k, w, imag
                 #pq, L, Fct_L = find_pd(j, start, surface_cord, circles)
                 if (smooth):
                     Fct_r = smooth_Fct(slices, r, i, L, Fct_L, a, voxelsize, k, gradct)
-                    print(Fct_r)
+                    
                 else:
                     index = L.index([r, i])
                     Fct_r = Fct_L[index] #find_Fct(slices, r, i, a, voxelsize, gradct)
@@ -344,6 +347,10 @@ def assd_Sobel(slices, target_label, voxelsize, a, SD, circles, seed, k, w, imag
             
     return dx, dy, mask, t, L, roi_z
 
+def invert(du):    
+    du = np.where(du == 4, "temp", 1)
+    du = np.where(du == "temp", 0, 1)
+    return du
 
 def plotting_assd(dx, dy, mask, target_img, quiver=False, plot=True, display=False):
     roi_cord = np.argwhere(mask != 0)
@@ -383,6 +390,8 @@ def plotting_assd(dx, dy, mask, target_img, quiver=False, plot=True, display=Fal
         #DU_mask[int(x[i]), int(y[i])] = 1
         
     du = make_mask(DU_mask, display)
+    du = invert(du)
+    
     if (plot):
         fig,ax = plt.subplots(1,1,figsize=[12,12])
         plt.imshow(target_img)
@@ -392,7 +401,7 @@ def plotting_assd(dx, dy, mask, target_img, quiver=False, plot=True, display=Fal
         ax.set_ylim(384, 128)
         plt.show()
         
-    return du
+    return np.array(du, dtype=bool)
 
 def make_mask(img, display):
     threshold = np.mean(img)
