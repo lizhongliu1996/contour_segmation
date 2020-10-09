@@ -24,7 +24,7 @@ def dice_coef(seg, gt, k=1):
     dice = np.sum(seg[gt==k])*2.0 / (np.sum(seg) + np.sum(gt))
     return dice
 
-def find_c(target_img1, target_label1, images, labels, c_list, SD, xlim=[300, 190], ylim=[300, 190], plot_dice=True):
+def find_c(target_img1, target_label1, images, labels, organ_id, c_list, SD, xlim=[300, 190], ylim=[300, 190], plot_dice=True):
     dice_list = []
     a=50
     voxelsize = np.array([0.976562, 0.976562, 2.5])
@@ -39,7 +39,7 @@ def find_c(target_img1, target_label1, images, labels, c_list, SD, xlim=[300, 19
     for i in range(len(c_list)):
         c = c_list[i]
         SD=[c*SD[0], c*SD[1], c*SD[2]]
-        dx, dy, mask, t1, L1, roi_z = af_Sobel.assd_Sobel(target_img1, target_label1, voxelsize, a, SD, circles, seed, k, w, images, labels, 1, ismax=ismax, smooth=True)
+        dx, dy, mask, t1, L1, roi_z = af_Sobel.assd_Sobel(target_img1, target_label1, voxelsize, a, SD, circles, seed, k, w, images, labels, organ_id, ismax=ismax, smooth=True)
         du1 = af_Sobel.plotting_assd(dx, dy, mask, target_img1, quiver=False, plot=False)
         dice = dice_coef(du1, target_label1, 1)
         dice_list.append(dice)
@@ -62,7 +62,7 @@ def find_c(target_img1, target_label1, images, labels, c_list, SD, xlim=[300, 19
     return df
 
 #Input is a list of paremeters for k and selected c
-def find_k(target_img1, target_label1, images, labels, k_list, c, SD, df, xlim=[300, 190], ylim=[300, 190], plot_dice=True):
+def find_k(target_img1, target_label1, images, labels, organ_id,k_list, c, SD, df, xlim=[300, 190], ylim=[300, 190], plot_dice=True):
     print(str(c) + "*[1.7, 2, 2.5]")
     dice_list = []
     voxelsize = np.array([0.976562, 0.976562, 2.5])
@@ -80,7 +80,7 @@ def find_k(target_img1, target_label1, images, labels, k_list, c, SD, df, xlim=[
     for i in range(len(k_list)):
         k = k_list[i]
         SD=[c*SD[0], c*SD[1], c*SD[2]]
-        dx, dy, mask, t1, L1, roi_z = af_Sobel.assd_Sobel(target_img1, target_label1, voxelsize, a, SD, circles, seed, k, w, images, labels, 1, ismax=ismax, smooth=True)
+        dx, dy, mask, t1, L1, roi_z = af_Sobel.assd_Sobel(target_img1, target_label1, voxelsize, a, SD, circles, seed, k, w, images, labels, organ_id, ismax=ismax, smooth=True)
         du1 = af_Sobel.plotting_assd(dx, dy, mask, target_img1, quiver=False, plot=False)
         dice = dice_coef(du1, target_label1, 1)
         dice_list.append(dice)
@@ -103,7 +103,7 @@ def find_k(target_img1, target_label1, images, labels, k_list, c, SD, df, xlim=[
     return df
 
 #Input is a list of paremeters for w and selected k & c
-def find_w(target_img1, target_label1, images, labels, w_list, k, c, SD, df, xlim=[300, 190], ylim=[300, 190], plot_dice=True):
+def find_w(target_img1, target_label1, images, labels, organ_id, w_list, k, c, SD, df, xlim=[300, 190], ylim=[300, 190], plot_dice=True):
     print("SD: " + str(c) + "*[1.7, 2, 2.5]")
     print("k: " + str(k))
     dice_list = []
@@ -122,7 +122,7 @@ def find_w(target_img1, target_label1, images, labels, w_list, k, c, SD, df, xli
     for i in range(len(w_list)):
         w = w_list[i]
         SD=[c*SD[0], c*SD[1], c*SD[2]]
-        dx, dy, mask, t1, L1, roi_z = af_Sobel.assd_Sobel(target_img1, target_label1, voxelsize, a, SD, circles, seed, k, w, images, labels, 1, ismax=ismax, smooth=True)
+        dx, dy, mask, t1, L1, roi_z = af_Sobel.assd_Sobel(target_img1, target_label1, voxelsize, a, SD, circles, seed, k, w, images, labels, organ_id, ismax=ismax, smooth=True)
         du1 = af_Sobel.plotting_assd(dx, dy, mask, target_img1, quiver=False, plot=False)
         dice = dice_coef(du1, target_label1, 1)
         dice_list.append(dice)
@@ -144,7 +144,7 @@ def find_w(target_img1, target_label1, images, labels, w_list, k, c, SD, df, xli
         plt.legend()
     return df
 
-def find_ismax(target_img1, target_label1, images, labels, w, k, c, df, xlim=[300, 190], ylim=[300, 190], ismax=False, plot_dice=True):
+def find_ismax(target_img1, target_label1, images, labels, organ_id, w, k, c, df, xlim=[300, 190], ylim=[300, 190], ismax=False, plot_dice=True):
     print("SD: " + str(c) + "*[1.7, 2, 2.5]")
     print("k: " + str(k))
     dice_list = []
@@ -161,7 +161,7 @@ def find_ismax(target_img1, target_label1, images, labels, w, k, c, df, xlim=[30
     ismax=False
     for i in range(len(w_list)):
         SD=[c*1.7, c*2, c*2.5]
-        dx, dy, mask, t1, L1, roi_z = af_Sobel.assd_Sobel(target_img1, target_label1, voxelsize, a, SD, circles, seed, k, w, images, labels, 1, ismax=ismax, smooth=True)
+        dx, dy, mask, t1, L1, roi_z = af_Sobel.assd_Sobel(target_img1, target_label1, voxelsize, a, SD, circles, seed, k, w, images, labels, organ_id, ismax=ismax, smooth=True)
         du1 = af_Sobel.plotting_assd(dx, dy, mask, target_img1, quiver=False, plot=False)
         dice = dice_coef(du1, target_label1, 1)
         dice_list.append(dice)
@@ -179,7 +179,7 @@ def find_ismax(target_img1, target_label1, images, labels, w, k, c, df, xlim=[30
         plt.axis('off')
     return df
 
-def different_slices(images, labels, roi_number, SD, k, w, ismax=False, xlim = [200, 300], ylim = [300, 200], plot=True):
+def different_slices(images, labels, roi_number, SD, k, w, organ_id, ismax=False, xlim = [200, 300], ylim = [300, 200], plot=True):
     a=50
     voxelsize = np.array([0.976562, 0.976562, 2.5])
     circles = 3
@@ -188,7 +188,7 @@ def different_slices(images, labels, roi_number, SD, k, w, ismax=False, xlim = [
     assd_contour_rectum = labels[..., roi_number].copy()
 
     for i in roi_z:
-        dx, dy, mask, t, L, roi_z = af_Sobel.assd_Sobel(images[i, ...], labels[..., roi_number][i, ...], voxelsize, a, SD, circles, seed, k, w, images, labels, 1, smooth=True)
+        dx, dy, mask, t, L, roi_z = af_Sobel.assd_Sobel(images[i, ...], labels[..., roi_number][i, ...], voxelsize, a, SD, circles, seed, k, w, images, labels, organ_id, smooth=True)
         du = af_Sobel.plotting_assd(dx, dy, mask, target_img1, quiver=False, plot=False)
         assd_contour_rectum[i, ...] = du 
     assd_contour = np.array(assd_contour_rectum)
