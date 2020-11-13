@@ -344,7 +344,7 @@ def assd_Sobel(slices, target_label, voxelsize, a, SD, circles, seed, k, w, imag
                 dx[r, i] = 0.00000000000001 #D_x
                 dy[r, i] = 0.00000000000001 #D_y
             
-            
+    #print(Fsd_r)      
     return dx, dy, mask, t, L, roi_z
 
 def invert(du):    
@@ -400,7 +400,7 @@ def plotting_assd(dx, dy, mask, target_img, quiver=False, plot=True, display=Fal
         ax.set_xlim(384, 128)
         ax.set_ylim(384, 128)
         plt.show()
-        
+    
     return np.array(du, dtype=bool)
 
 def make_mask(img, display):
