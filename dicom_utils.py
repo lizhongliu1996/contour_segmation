@@ -504,7 +504,7 @@ def RTStruct(maskVolumeStruct, maskName, DICOMImageStruct, fname='RS_test.dcm', 
 
             current_shape = MaskVolume_temp.shape
 
-            mask_new, contours, hierarchy = cv2.findContours(MaskVolume_temp.astype(np.uint8), mode=cv2.RETR_EXTERNAL,
+            contours, hierarchy = cv2.findContours(MaskVolume_temp.astype(np.uint8), mode=cv2.RETR_EXTERNAL,
                                                              method=cv2.CHAIN_APPROX_NONE)
 
             # Extra step for outside contours
