@@ -1,0 +1,17 @@
+Red	    #FF0000 (255,0,0)
+
+light blue  #00FFFF (0,255,255)
+Blue	    #0000FF (0,0,255)
+dark blue   #00008B (0,0,139)
+
+light yellow#EEE8AA (238,232,170)
+Yellow 	    #FFFF00 (255,255,0)
+dark yellow #DAA520 (218,165,32)
+
+light green #90EE90 (144,238,144)
+Green 	    #00FF00 (0,255,0)
+dark green  #006400 (0,100,0)
+
+light violet#EE82EE (238,130,238
+Purple      #FF00FF (255,0,255)
+dark violet #9400D3 (148,0,211)
