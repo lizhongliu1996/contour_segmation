@@ -436,6 +436,7 @@ def RTStruct(maskVolumeStruct, maskName, DICOMImageStruct, outputColor,fname='RS
     ReferencedFrameOfReferenceSequence.append(item4)
 
     ########################################################################
+    colorVal = [255,0,0]
     if outputColor=="red":
         colorVal = [255, 0, 0]
     elif outputColor == "purple":
