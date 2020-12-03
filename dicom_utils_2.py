@@ -340,7 +340,7 @@ def get_labels(contours, shape, dicom_info, rois=None):
     return label_map
 
 
-def RTStruct(maskVolumeStruct, maskName, DICOMImageStruct, fname='RS_test.dcm', flag_pos=0, flag_ori=0,
+def RTStruct(maskVolumeStruct, maskName, color, DICOMImageStruct, fname='RS_test.dcm', flag_pos=0, flag_ori=0,
              flag_resize_xy=0, resize_shift=[0., 0.], ref_pixsize=[2.500, 0.9765625, 0.9765625]):
     print("Writing the RT Structure file...")
     # Create , dicom structure
@@ -439,7 +439,7 @@ def RTStruct(maskVolumeStruct, maskName, DICOMImageStruct, fname='RS_test.dcm', 
     for nm in range(numROI):
         # ROIContourSequence
         structure_ds = Dataset()
-        structure_ds.ROIDisplayColor = [255, 0, 0]
+        structure_ds.ROIDisplayColor = color[nm]
         structure_ds.ReferencedROINumber = nm + 1
         ContourSequence = Sequence()
 
