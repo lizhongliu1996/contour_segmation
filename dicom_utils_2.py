@@ -434,12 +434,27 @@ def RTStruct(maskVolumeStruct, maskName, color, DICOMImageStruct, fname='RS_test
 
     ReferencedFrameOfReferenceSequence = Sequence()
     ReferencedFrameOfReferenceSequence.append(item4)
+    
+    def color2value(color):
+        if color=="red":
+            colorVal = [255, 0, 0]
+        elif color == "purple":
+            colorVal = [255, 0, 255]
+        elif color == "yellow":
+            colorVal = [255,255,0]
+        elif color == "blue":
+            colorVal = [0,0,255]
+        elif color == "orange":
+            colorVal = [255,165,0]
+        elif color == "green":
+            colorVal = [0,255,0]
+        return colorVal
 
     ########################################################################
     for nm in range(numROI):
         # ROIContourSequence
         structure_ds = Dataset()
-        structure_ds.ROIDisplayColor = color[nm]
+        structure_ds.ROIDisplayColor = color2value(color[nm])
         structure_ds.ReferencedROINumber = nm + 1
         ContourSequence = Sequence()
 
