@@ -345,7 +345,7 @@ def assd_Sobel(slices, target_label, voxelsize, a, SD, circles, seed, k, w, imag
                 dy[r, i] = 0.00000000000001 #D_y
             
     #print(Fsd_r)      
-    return dx, dy, mask, t, L, roi_z
+    return dx, dy, mask, t, L, roi_z, i0
 
 def invert(du):    
     du = np.where(du == 4, "temp", 1)
@@ -401,9 +401,10 @@ def plotting_assd(dx, dy, mask, target_img, quiver=False, plot=True, display=Fal
         ax.set_ylim(384, 128)
         plt.show()
     
-    return np.array(du, dtype=bool)
+    return  np.array(du, dtype=bool)
 
 def make_mask(img, display):
+    
     threshold = np.mean(img)
     thresh_img = np.where(img<threshold,1.0,0.0)  # threshold the image
     # First erode away the finer elements, then dilate to include some of the pixels surrounding the lung.  
@@ -411,11 +412,11 @@ def make_mask(img, display):
 
     eroded = morphology.erosion(thresh_img,np.ones([7,7]))
     dilation = morphology.dilation(eroded,np.ones([8,8]))
-
     #labels = measure.label(dilation)
-    blur = cv.GaussianBlur(dilation,(25,25),0)
-    #blur = cv2.GaussianBlur(blur,(25,25),0)
-    #blur = cv2.GaussianBlur(blur,(25,25),0)
+    blur = dilation #cv.GaussianBlur(dilation,(25,25),0)
+    blur = cv2.GaussianBlur(blur,(25,25),0)
+    blur = cv2.GaussianBlur(blur,(25,25),0)
     final_du = np.where(blur < 0.5, 0, 4)
+
     return final_du
 
